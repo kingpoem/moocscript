@@ -77,14 +77,65 @@ def html_to_text(html_content: str) -> str:
     return text
 
 
+def html_to_markdown(html_content: str) -> str:
+    """Convert HTML content to Markdown format, preserving images.
+    
+    Args:
+        html_content: HTML content string
+        
+    Returns:
+        Markdown formatted string with images preserved
+    """
+    if not html_content:
+        return ""
+    
+    # Extract images and convert to markdown format
+    # Pattern: <img src="url" alt="alt"> or <img src="url">
+    img_pattern = r'<img[^>]+src=["\']([^"\']+)["\'][^>]*(?:alt=["\']([^"\']*)["\'])?[^>]*>'
+    
+    def replace_img(match):
+        img_url = match.group(1)
+        img_alt = match.group(2) if match.group(2) else ""
+        # Convert to markdown image syntax: ![alt](url)
+        return f"![{img_alt}]({img_url})"
+    
+    # Replace img tags with markdown syntax
+    text = re.sub(img_pattern, replace_img, html_content)
+    
+    # Remove other HTML tags but preserve content
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # Decode HTML entities
+    text = html.unescape(text)
+    
+    # Remove Unicode control characters
+    text = clean_unicode_control_chars(text)
+    
+    # Clean up whitespace (but preserve newlines around images)
+    # Replace multiple spaces with single space, but keep newlines
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        # Clean up spaces but preserve the line structure
+        line = re.sub(r'[ \t]+', ' ', line)
+        cleaned_lines.append(line.strip())
+    text = '\n'.join(cleaned_lines)
+    
+    # Clean up multiple newlines (but keep single newlines)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = text.strip()
+    
+    return text
+
+
 def format_question_title(title: str) -> str:
-    """Format question title, converting HTML to plain text."""
-    return html_to_text(title)
+    """Format question title, converting HTML to Markdown (preserving images)."""
+    return html_to_markdown(title)
 
 
 def format_option(option: Dict[str, Any], index: int) -> str:
     """Format a single option for multiple choice questions."""
-    content = html_to_text(option.get("content", ""))
+    content = html_to_markdown(option.get("content", ""))
     is_correct = option.get("answer", False)
     
     # Use checkbox or letter prefix
@@ -134,7 +185,7 @@ def format_objective_question(question: Dict[str, Any], q_num: int) -> str:
     
     # Analysis
     if analyse:
-        analyse_text = html_to_text(analyse)
+        analyse_text = html_to_markdown(analyse)
         lines.append(f"**解析：** {analyse_text}")
         lines.append("")
     
@@ -176,7 +227,7 @@ def format_subjective_question(question: Dict[str, Any], q_num: int) -> str:
     # Sample answers
     if sample_answers:
         if isinstance(sample_answers, str):
-            answer_text = html_to_text(sample_answers)
+            answer_text = html_to_markdown(sample_answers)
         else:
             answer_text = str(sample_answers)
         lines.append("**参考答案：**")
@@ -190,7 +241,7 @@ def format_subjective_question(question: Dict[str, Any], q_num: int) -> str:
         lines.append("")
         for judge in judge_dtos:
             if isinstance(judge, dict):
-                msg = html_to_text(judge.get("msg", ""))
+                msg = html_to_markdown(judge.get("msg", ""))
                 if msg:
                     lines.append(f"- {msg}")
         lines.append("")

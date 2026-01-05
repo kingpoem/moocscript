@@ -2,17 +2,22 @@
 
 import argparse
 import re
+import tempfile
+import shutil
 from pathlib import Path
+from typing import Optional
+from urllib.parse import urlparse
 
 try:
     from docx import Document
     from docx.shared import Pt, Inches, RGBColor
     from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     from docx.oxml.ns import qn
+    import requests
 except ImportError:
     print("Error: Required packages not installed.")
     print("Please install: uv sync")
-    print("Or manually: pip install python-docx")
+    print("Or manually: pip install python-docx requests")
     exit(1)
 
 
@@ -50,15 +55,203 @@ def find_markdown_files(markdown_dir: Path) -> dict:
     return courses_data
 
 
-def parse_markdown_to_docx(md_content: str, doc: Document):
+def download_image(image_url: str, cache_dir: Optional[Path] = None) -> Optional[Path]:
+    """Download an image from URL and save it to cache directory.
+    
+    Args:
+        image_url: URL of the image to download
+        cache_dir: Directory to cache downloaded images (optional)
+        
+    Returns:
+        Path to the downloaded image file, or None if download failed
+    """
+    if not image_url:
+        return None
+    
+    try:
+        # Create cache directory if provided
+        if cache_dir:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate filename from URL
+            parsed_url = urlparse(image_url)
+            filename = Path(parsed_url.path).name
+            if not filename or '.' not in filename:
+                # Generate extension from content type or use default
+                filename = f"image_{hash(image_url) % 100000}.jpg"
+            cache_file = cache_dir / filename
+            
+            # Check if already cached
+            if cache_file.exists():
+                return cache_file
+            
+            # Download image
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(image_url, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            # Save to cache
+            with open(cache_file, 'wb') as f:
+                f.write(response.content)
+            
+            return cache_file
+        else:
+            # Use temporary file if no cache directory
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(image_url, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            # Create temporary file
+            suffix = Path(urlparse(image_url).path).suffix or '.jpg'
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            temp_file.write(response.content)
+            temp_file.close()
+            
+            return Path(temp_file.name)
+    except Exception as e:
+        print(f"  Warning: Failed to download image {image_url}: {str(e)}")
+        return None
+
+
+def add_text_with_images(doc: Document, content: str, image_cache_dir: Optional[Path] = None, 
+                         font_size: Pt = None, font_name: str = '宋体', bold: bool = False,
+                         paragraph: Optional = None, inline_images: bool = False,
+                         paragraph_indent: Optional[Inches] = None) -> list:
+    """Add text content to a paragraph, processing any images inline.
+    
+    Args:
+        doc: Document object
+        content: Text content that may contain image markers ![alt](url)
+        image_cache_dir: Directory to cache downloaded images
+        font_size: Font size (default: 10.5pt)
+        font_name: Font name (default: 宋体)
+        bold: Whether text should be bold
+        paragraph: Existing paragraph to add to (creates new if None)
+        inline_images: If True, images are added inline in the same paragraph (for options)
+                       If False, images are added in separate centered paragraphs
+        paragraph_indent: If provided, apply this indent to image paragraphs
+        
+    Returns:
+        List of paragraphs created (for tracking)
+    """
+    if font_size is None:
+        font_size = Pt(10.5)
+    
+    created_paragraphs = []
+    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+    image_matches = list(re.finditer(image_pattern, content))
+    
+    if not image_matches:
+        # No images, just add text
+        if paragraph is None:
+            paragraph = doc.add_paragraph()
+            created_paragraphs.append(paragraph)
+        run = paragraph.add_run(content)
+        run.font.size = font_size
+        run.font.name = font_name
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+        if bold:
+            run.font.bold = True
+        return created_paragraphs
+    
+    # Has images, process them
+    last_pos = 0
+    for img_match in image_matches:
+        # Add text before image
+        if img_match.start() > last_pos:
+            text_part = content[last_pos:img_match.start()].strip()
+            if text_part:
+                if paragraph is None:
+                    paragraph = doc.add_paragraph()
+                    created_paragraphs.append(paragraph)
+                run = paragraph.add_run(text_part)
+                run.font.size = font_size
+                run.font.name = font_name
+                run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+                if bold:
+                    run.font.bold = True
+        
+        # Process image
+        img_url = img_match.group(2)
+        img_alt = img_match.group(1) or ""
+        
+        # Download and insert image
+        img_path = download_image(img_url, image_cache_dir)
+        if img_path and img_path.exists():
+            try:
+                if inline_images and paragraph is not None:
+                    # Add image inline in the same paragraph (for options)
+                    run = paragraph.add_run()
+                    run.add_picture(str(img_path), width=Inches(5))
+                else:
+                    # Add image in a new paragraph
+                    img_para = doc.add_paragraph()
+                    created_paragraphs.append(img_para)
+                    if paragraph_indent is not None:
+                        img_para.paragraph_format.left_indent = paragraph_indent
+                    if not inline_images:
+                        img_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    img_para.paragraph_format.space_before = Pt(3)
+                    img_para.paragraph_format.space_after = Pt(3)
+                    img_run = img_para.add_run()
+                    # Insert image with max width
+                    img_run.add_picture(str(img_path), width=Inches(5 if inline_images else 6))
+            except Exception as e:
+                print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
+                # Add alt text as fallback
+                if paragraph is None:
+                    paragraph = doc.add_paragraph()
+                    created_paragraphs.append(paragraph)
+                run = paragraph.add_run(f"[图片: {img_alt}]" if img_alt else "[图片]")
+                run.font.size = font_size
+                run.font.name = font_name
+                run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+        else:
+            # Add alt text as fallback
+            if paragraph is None:
+                paragraph = doc.add_paragraph()
+                created_paragraphs.append(paragraph)
+            run = paragraph.add_run(f"[图片加载失败: {img_alt}]" if img_alt else "[图片加载失败]")
+            run.font.size = font_size
+            run.font.name = font_name
+            run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+        
+        last_pos = img_match.end()
+    
+    # Add remaining text after last image
+    if last_pos < len(content):
+        text_part = content[last_pos:].strip()
+        if text_part:
+            if paragraph is None:
+                paragraph = doc.add_paragraph()
+                created_paragraphs.append(paragraph)
+            run = paragraph.add_run(text_part)
+            run.font.size = font_size
+            run.font.name = font_name
+            run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+            if bold:
+                run.font.bold = True
+    
+    return created_paragraphs
+
+
+def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Optional[Path] = None):
     """Parse Markdown content and add it to a DOCX document with compact formatting.
     
     Args:
         md_content: Markdown content string
         doc: python-docx Document object
+        image_cache_dir: Directory to cache downloaded images (optional)
     """
     lines = md_content.split('\n')
     i = 0
+    
+    # Image pattern: ![alt](url) or ![](url)
+    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
     
     # Set default font for the document
     style = doc.styles['Normal']
@@ -168,14 +361,73 @@ def parse_markdown_to_docx(md_content: str, doc: Document):
                 run1.font.name = '宋体'
                 run1._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 
-                run2 = p.add_run(content)
-                run2.font.size = Pt(10.5)
-                run2.font.name = '宋体'
-                run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
-                
                 if is_correct:
                     run1.font.bold = True
-                    run2.font.bold = True
+                
+                # Process content (may contain images)
+                image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+                image_matches = list(re.finditer(image_pattern, content))
+                
+                if not image_matches:
+                    # No images, just add text
+                    run2 = p.add_run(content)
+                    run2.font.size = Pt(10.5)
+                    run2.font.name = '宋体'
+                    run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                    if is_correct:
+                        run2.font.bold = True
+                else:
+                    # Has images, process them
+                    last_pos = 0
+                    for img_match in image_matches:
+                        # Add text before image
+                        if img_match.start() > last_pos:
+                            text_part = content[last_pos:img_match.start()].strip()
+                            if text_part:
+                                run = p.add_run(text_part)
+                                run.font.size = Pt(10.5)
+                                run.font.name = '宋体'
+                                run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                                if is_correct:
+                                    run.font.bold = True
+                        
+                        # Process image
+                        img_url = img_match.group(2)
+                        img_alt = img_match.group(1) or ""
+                        
+                        # Download and insert image
+                        img_path = download_image(img_url, image_cache_dir)
+                        if img_path and img_path.exists():
+                            try:
+                                # Add image inline in the same paragraph
+                                run = p.add_run()
+                                run.add_picture(str(img_path), width=Inches(4))
+                            except Exception as e:
+                                print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
+                                # Add alt text as fallback
+                                run = p.add_run(f"[图片: {img_alt}]" if img_alt else "[图片]")
+                                run.font.size = Pt(10.5)
+                                run.font.name = '宋体'
+                                run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                        else:
+                            # Add alt text as fallback
+                            run = p.add_run(f"[图片加载失败: {img_alt}]" if img_alt else "[图片加载失败]")
+                            run.font.size = Pt(10.5)
+                            run.font.name = '宋体'
+                            run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                        
+                        last_pos = img_match.end()
+                    
+                    # Add remaining text after last image
+                    if last_pos < len(content):
+                        text_part = content[last_pos:].strip()
+                        if text_part:
+                            run = p.add_run(text_part)
+                            run.font.size = Pt(10.5)
+                            run.font.name = '宋体'
+                            run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                            if is_correct:
+                                run.font.bold = True
                 
                 option_index += 1
                 i += 1
@@ -213,10 +465,64 @@ def parse_markdown_to_docx(md_content: str, doc: Document):
                 run1.font.name = '宋体'
                 run1._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 if rest_text:
-                    run2 = p.add_run(rest_text)
-                    run2.font.size = Pt(10.5)
-                    run2.font.name = '宋体'
-                    run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                    # Process rest_text which may contain images
+                    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+                    image_matches = list(re.finditer(image_pattern, rest_text))
+                    
+                    if not image_matches:
+                        # No images, just add text
+                        run2 = p.add_run(rest_text)
+                        run2.font.size = Pt(10.5)
+                        run2.font.name = '宋体'
+                        run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                    else:
+                        # Has images, process them
+                        last_pos = 0
+                        for img_match in image_matches:
+                            # Add text before image
+                            if img_match.start() > last_pos:
+                                text_part = rest_text[last_pos:img_match.start()].strip()
+                                if text_part:
+                                    run = p.add_run(text_part)
+                                    run.font.size = Pt(10.5)
+                                    run.font.name = '宋体'
+                                    run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                            
+                            # Process image
+                            img_url = img_match.group(2)
+                            img_alt = img_match.group(1) or ""
+                            
+                            # Download and insert image
+                            img_path = download_image(img_url, image_cache_dir)
+                            if img_path and img_path.exists():
+                                try:
+                                    # Add image inline in the same paragraph
+                                    run = p.add_run()
+                                    run.add_picture(str(img_path), width=Inches(5))
+                                except Exception as e:
+                                    print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
+                                    # Add alt text as fallback
+                                    run = p.add_run(f"[图片: {img_alt}]" if img_alt else "[图片]")
+                                    run.font.size = Pt(10.5)
+                                    run.font.name = '宋体'
+                                    run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                            else:
+                                # Add alt text as fallback
+                                run = p.add_run(f"[图片加载失败: {img_alt}]" if img_alt else "[图片加载失败]")
+                                run.font.size = Pt(10.5)
+                                run.font.name = '宋体'
+                                run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                            
+                            last_pos = img_match.end()
+                        
+                        # Add remaining text after last image
+                        if last_pos < len(rest_text):
+                            text_part = rest_text[last_pos:].strip()
+                            if text_part:
+                                run = p.add_run(text_part)
+                                run.font.size = Pt(10.5)
+                                run.font.name = '宋体'
+                                run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
             i += 1
             continue
         
@@ -242,6 +548,89 @@ def parse_markdown_to_docx(md_content: str, doc: Document):
             i += 1
             continue
         
+        # Check for images in the line: ![alt](url)
+        image_matches = list(re.finditer(image_pattern, original_line))
+        if image_matches:
+            # Split line by images and process text/image parts
+            last_pos = 0
+            
+            for img_match in image_matches:
+                # Add text before image
+                if img_match.start() > last_pos:
+                    text_part = original_line[last_pos:img_match.start()].strip()
+                    if text_part:
+                        p = doc.add_paragraph()
+                        p.paragraph_format.space_before = Pt(0)
+                        p.paragraph_format.space_after = Pt(0)
+                        run = p.add_run(text_part)
+                        run.font.size = Pt(10.5)
+                        run.font.name = '宋体'
+                        run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                
+                # Process image
+                img_url = img_match.group(2)
+                img_alt = img_match.group(1) or ""
+                
+                # Download image
+                img_path = download_image(img_url, image_cache_dir)
+                if img_path and img_path.exists():
+                    try:
+                        p = doc.add_paragraph()
+                        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        p.paragraph_format.space_before = Pt(6)
+                        p.paragraph_format.space_after = Pt(6)
+                        run = p.add_run()
+                        # Insert image with max width of 6 inches
+                        run.add_picture(str(img_path), width=Inches(6))
+                    except Exception as e:
+                        print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
+                        # Add alt text as fallback
+                        if img_alt:
+                            p = doc.add_paragraph()
+                            p.paragraph_format.space_before = Pt(0)
+                            p.paragraph_format.space_after = Pt(0)
+                            run = p.add_run(f"[图片: {img_alt}]")
+                            run.font.size = Pt(10.5)
+                            run.font.name = '宋体'
+                            run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                else:
+                    # Add alt text as fallback
+                    if img_alt:
+                        p = doc.add_paragraph()
+                        p.paragraph_format.space_before = Pt(0)
+                        p.paragraph_format.space_after = Pt(0)
+                        run = p.add_run(f"[图片加载失败: {img_alt}]")
+                        run.font.size = Pt(10.5)
+                        run.font.name = '宋体'
+                        run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                
+                last_pos = img_match.end()
+            
+            # Add remaining text after last image
+            if last_pos < len(original_line):
+                text_part = original_line[last_pos:].strip()
+                if text_part:
+                    p = doc.add_paragraph()
+                    p.paragraph_format.space_before = Pt(0)
+                    p.paragraph_format.space_after = Pt(0)
+                    run = p.add_run(text_part)
+                    run.font.size = Pt(10.5)
+                    run.font.name = '宋体'
+                    run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+            
+            # If line was only images, we've already processed it
+            i += 1
+            continue
+        
+        # Regular text (process text that may contain images inline, but already handled above)
+        # Check if line contains image markers but wasn't handled (shouldn't happen, but safety check)
+        if re.search(image_pattern, line):
+            # Remove image markers and process as text
+            line = re.sub(image_pattern, '', line).strip()
+            if not line:
+                i += 1
+                continue
+        
         # Regular text
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(0)
@@ -253,12 +642,13 @@ def parse_markdown_to_docx(md_content: str, doc: Document):
         i += 1
 
 
-def convert_markdown_to_docx(md_file: Path, docx_file: Path):
+def convert_markdown_to_docx(md_file: Path, docx_file: Path, image_cache_dir: Optional[Path] = None):
     """Convert a single Markdown file to DOCX.
     
     Args:
         md_file: Path to Markdown file
         docx_file: Path to output DOCX file
+        image_cache_dir: Directory to cache downloaded images (optional)
     """
     # Read Markdown content
     with open(md_file, "r", encoding="utf-8") as f:
@@ -275,8 +665,8 @@ def convert_markdown_to_docx(md_file: Path, docx_file: Path):
         section.left_margin = Inches(0.6)
         section.right_margin = Inches(0.6)
     
-    # Parse and add content
-    parse_markdown_to_docx(md_content, doc)
+    # Parse and add content (with image support)
+    parse_markdown_to_docx(md_content, doc, image_cache_dir=image_cache_dir)
     
     # Save document
     doc.save(docx_file)
@@ -311,6 +701,12 @@ def main():
         default=None,
         help="JSON file containing list of course names to process",
     )
+    parser.add_argument(
+        "--image-cache",
+        type=str,
+        default=None,
+        help="Directory to cache downloaded images (default: output/images)",
+    )
     
     args = parser.parse_args()
     
@@ -329,6 +725,13 @@ def main():
     
     markdown_dir = Path(args.input)
     docx_dir = Path(args.output)
+    
+    # Set up image cache directory
+    if args.image_cache:
+        image_cache_dir = Path(args.image_cache)
+    else:
+        image_cache_dir = docx_dir.parent / "images"
+    image_cache_dir.mkdir(parents=True, exist_ok=True)
     
     if not markdown_dir.exists():
         print(f"Input directory not found: {markdown_dir}")
@@ -393,8 +796,8 @@ def main():
                         total_skipped += 1
                         continue
                     
-                    # Convert to DOCX
-                    convert_markdown_to_docx(md_file, docx_file)
+                    # Convert to DOCX (with image support)
+                    convert_markdown_to_docx(md_file, docx_file, image_cache_dir=image_cache_dir)
                     course_exported += 1
                     total_exported += 1
                 except Exception as e:
