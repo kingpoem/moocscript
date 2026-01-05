@@ -229,7 +229,6 @@ def export_paper_to_markdown(
         lines.append(f"**课程：** {course_name}")
     if chapter_name:
         lines.append(f"**章节：** {chapter_name}")
-    lines.append(f"**类型：** {paper_type}")
     lines.append("")
     lines.append("---")
     lines.append("")
