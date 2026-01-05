@@ -269,9 +269,8 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
         original_line = lines[i]
         
         # Skip empty lines (we'll add minimal spacing manually)
+        # Don't reset in_options_section on empty lines - options may have empty lines between them
         if not line:
-            in_options_section = False
-            option_index = 0
             i += 1
             continue
         
@@ -342,7 +341,14 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             continue
         
         # Checkbox options - convert to ABCD format (only in options section)
+        # Also check if this looks like an option (starts with - [ ] or - [x] after "**选项：**" section)
         if re.match(r'^- \[[ xX]\] ', original_line):
+            # If we're in options section, or if this is the first option after "**选项：**"
+            # (check previous lines for "**选项：**")
+            if in_options_section or (i > 0 and any('**选项：**' in lines[j] for j in range(max(0, i-5), i))):
+                if not in_options_section:
+                    in_options_section = True
+                    option_index = 0
             if in_options_section:
                 # Extract option content
                 content = re.sub(r'^- \[[ xX]\] ', '', original_line).strip()
