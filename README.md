@@ -3,7 +3,7 @@
 使用 Python 抽离了 [mooc-helper](https://github.com/whale4113/mooc-helper) 核心 API 请求逻辑。将请求结果保存为 Json，方便后续处理成 markdown 和 docx 供复习使用。此项目初衷完全是为了方便复习使用。
 
 该脚本会将一门课程的所有测验和考试 md 文件进行合并，然后转成 docx 供打印。 
-如果你对导出 docx 的颜值有较高要求，也可以将合并的 md 放到你喜欢的应用里进行 docx 转换。
+docx 支持图片格式的插入，但是 main 分支中的 pdf 不支持。
 
 > [!CAUTION]
 > 注意，对于限时作业和考试，一旦进行了请求，就会开始计时。务必谨慎使用。
@@ -12,7 +12,7 @@
 
 原生开发平台 Archlinux
 
-在 macOS 和 Windows 上可以比较简单的转换到 markdown，后续 docx 处理建议换到其他软件。
+在 macOS 和 Windows 上可以比较简单的转换到 markdown
 
 ```bash
 uv sync
@@ -25,6 +25,8 @@ uv sync
 
 ```bash
 export MOOC_MOB_TOKEN=xxx
+# or
+uv run python fetch_all.py --token=xxx # on Windows
 ```
 
 ## 运行方法

@@ -434,6 +434,24 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                             if is_correct:
                                 run.font.bold = True
+                    
+                    # Add "(正确答案)" marker after images if this is the correct answer
+                    if is_correct:
+                        run = p.add_run(" （正确答案）")
+                        run.font.size = Pt(10.5)
+                        run.font.name = '宋体'
+                        run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                        run.font.bold = True
+                        run.font.color.rgb = RGBColor(0, 128, 0)  # Green color
+                
+                # Add "(正确答案)" marker for text-only options if this is the correct answer
+                if is_correct and not image_matches:
+                    run = p.add_run(" （正确答案）")
+                    run.font.size = Pt(10.5)
+                    run.font.name = '宋体'
+                    run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                    run.font.bold = True
+                    run.font.color.rgb = RGBColor(0, 128, 0)  # Green color
                 
                 option_index += 1
                 i += 1
