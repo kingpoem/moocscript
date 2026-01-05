@@ -1,9 +1,9 @@
 # MoocScript
 
-使用 Python 抽离了 [mooc-helper](https://github.com/whale4113/mooc-helper) 核心 API 请求逻辑。将请求结果保存为 Json，方便后续处理成 markdown 和 pdf 供复习使用。此项目初衷完全是为了方便复习使用。
+使用 Python 抽离了 [mooc-helper](https://github.com/whale4113/mooc-helper) 核心 API 请求逻辑。将请求结果保存为 Json，方便后续处理成 markdown 和 docx 供复习使用。此项目初衷完全是为了方便复习使用。
 
-该脚本会将一门课程的所有测验和考试 md 文件进行合并，然后转成 pdf 供打印。 
-如果你对导出 pdf 的颜值有较高要求，也可以将合并的 md 放到你喜欢的应用里进行 pdf 转换。
+该脚本会将一门课程的所有测验和考试 md 文件进行合并，然后转成 docx 供打印。 
+如果你对导出 docx 的颜值有较高要求，也可以将合并的 md 放到你喜欢的应用里进行 docx 转换。
 
 > [!CAUTION]
 > 注意，对于限时作业和考试，一旦进行了请求，就会开始计时。务必谨慎使用。
@@ -12,7 +12,7 @@
 
 原生开发平台 Archlinux
 
-在 macOS 和 Windows 上可以比较简单的转换到 markdown，后续 pdf 处理建议换到其他软件。
+在 macOS 和 Windows 上可以比较简单的转换到 markdown，后续 docx 处理建议换到其他软件。
 
 ```bash
 uv sync
@@ -32,9 +32,9 @@ export MOOC_MOB_TOKEN=xxx
 ```bash
 uv run python fetch_json.py      # 获取 JSON（交互式选择课程，--all 下载全部）
 uv run python convert_markdown.py # 转换为 Markdown
-uv run python convert_pdf.py     # 转换为 PDF
+uv run python convert_docx.py    # 转换为 DOCX
 
-uv run python fetch_all.py        # 一键运行（交互式选择，--all 下载全部，--skip-markdown/--skip-pdf 跳过步骤）
+uv run python fetch_all.py        # 一键运行（交互式选择，--all 下载全部，--skip-markdown/--skip-docx 跳过步骤）
 ```
 
 ## 免责声明

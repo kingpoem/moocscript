@@ -1,6 +1,6 @@
-"""一次性获取所有课程数据并转换为 Markdown 和 PDF 格式。
+"""一次性获取所有课程数据并转换为 Markdown 和 DOCX 格式。
 
-该脚本依次执行 fetch_json.py、convert_markdown.py 和 convert_pdf.py，提供便捷的一键运行方式。
+该脚本依次执行 fetch_json.py、convert_markdown.py 和 convert_docx.py，提供便捷的一键运行方式。
 """
 
 import argparse
@@ -130,7 +130,7 @@ def load_selected_courses(output_dir: Path) -> List[str]:
 def main():
     """主函数 - 依次执行 fetch_json、convert_markdown 和 convert_pdf。"""
     parser = argparse.ArgumentParser(
-        description="获取所有 MOOC 课程、测验、考试并转换为 Markdown 和 PDF 格式"
+        description="获取所有 MOOC 课程、测验、考试并转换为 Markdown 和 DOCX 格式"
     )
     parser.add_argument(
         "--output",
@@ -150,9 +150,9 @@ def main():
         help="Skip Markdown conversion (only fetch JSON)",
     )
     parser.add_argument(
-        "--skip-pdf",
+        "--skip-docx",
         action="store_true",
-        help="Skip PDF conversion (only fetch JSON and convert to Markdown)",
+        help="Skip DOCX conversion (only fetch JSON and convert to Markdown)",
     )
     parser.add_argument(
         "--all",
@@ -277,14 +277,14 @@ def main():
             print("Failed to convert to Markdown")
             return
         
-        # Convert to PDF if requested
-        if not args.skip_pdf:
-            print("\nStep 4: Converting to PDF...")
+        # Convert to DOCX if requested
+        if not args.skip_docx:
+            print("\nStep 4: Converting to DOCX...")
             cmd = [
                 sys.executable,
-                "convert_pdf.py",
+                "convert_docx.py",
                 "--input", str(output_dir / "markdown"),
-                "--output", str(output_dir / "pdf"),
+                "--output", str(output_dir / "docx"),
             ]
             # Pass selected courses file if available
             courses_file = output_dir / "json" / "selected_courses.json"
@@ -294,7 +294,7 @@ def main():
             result = subprocess.run(cmd)
             
             if result.returncode != 0:
-                print("Failed to convert to PDF")
+                print("Failed to convert to DOCX")
                 return
     
     print("\nAll done!")
