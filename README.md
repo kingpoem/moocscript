@@ -22,7 +22,8 @@ export MOOC_MOB_TOKEN=xxx
 ## 运行方法
 
 ```bash
-uv run python fetch_json.py      # 获取 JSON 数据
+uv run python fetch_json.py      # 获取 JSON 数据（交互式选择课程，使用 --all 跳过选择）
 uv run python convert_markdown.py # 转换为 Markdown
-uv run python fetch_all.py        # 一次性运行前两个任务
+uv run python convert_pdf.py     # 转换为 PDF
+uv run python fetch_all.py        # 一次性运行所有任务
 ```

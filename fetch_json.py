@@ -2,9 +2,89 @@
 
 import argparse
 from pathlib import Path
+from typing import List, Dict, Any
 
 from moocscript import APIConfig, MOOCClient
 from moocscript.fetcher import CourseFetcher
+
+
+def select_courses_interactively(courses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Interactive course selection.
+    
+    Args:
+        courses: List of course dictionaries
+        
+    Returns:
+        List of selected course dictionaries
+    """
+    print("=" * 60)
+    print("课程列表")
+    print("=" * 60)
+    
+    # Display all courses
+    for i, course in enumerate(courses, 1):
+        course_name = course.get("name", "Unknown")
+        print(f"{i:3d}. {course_name}")
+    
+    print("=" * 60)
+    print("\n请选择要下载的课程（输入序号，多个用逗号分隔，如：1,3,5 或输入 all 下载全部）：")
+    
+    while True:
+        try:
+            user_input = input("> ").strip()
+            
+            if not user_input:
+                print("未选择任何课程")
+                return []
+            
+            if user_input.lower() == "all":
+                print(f"\n已选择全部 {len(courses)} 门课程")
+                return courses
+            
+            # Parse selections
+            selections = [s.strip() for s in user_input.split(",")]
+            selected_indices = []
+            
+            for sel in selections:
+                if "-" in sel:
+                    # Range selection (e.g., "1-5")
+                    try:
+                        start, end = map(int, sel.split("-"))
+                        selected_indices.extend(range(start, end + 1))
+                    except ValueError:
+                        print(f"无效的范围格式: {sel}")
+                        continue
+                else:
+                    try:
+                        idx = int(sel)
+                        if 1 <= idx <= len(courses):
+                            selected_indices.append(idx)
+                        else:
+                            print(f"无效的序号: {idx} (范围: 1-{len(courses)})")
+                            continue
+                    except ValueError:
+                        print(f"无效的输入: {sel}")
+                        continue
+            
+            if not selected_indices:
+                print("未选择任何有效课程，请重新输入")
+                continue
+            
+            # Remove duplicates and sort
+            selected_indices = sorted(set(selected_indices))
+            selected_courses = [courses[i - 1] for i in selected_indices]
+            
+            print(f"\n已选择 {len(selected_courses)} 门课程：")
+            for idx, course in zip(selected_indices, selected_courses):
+                print(f"  {idx}. {course.get('name', 'Unknown')}")
+            
+            return selected_courses
+            
+        except KeyboardInterrupt:
+            print("\n\n已取消选择")
+            return []
+        except Exception as e:
+            print(f"输入错误: {str(e)}，请重新输入")
 
 
 def main():
@@ -23,6 +103,11 @@ def main():
         type=str,
         default=None,
         help="MOOC mob token (overrides environment variable)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Download all courses without interactive selection",
     )
     
     args = parser.parse_args()
@@ -46,9 +131,28 @@ def main():
         # Initialize fetcher
         fetcher = CourseFetcher(client, output_dir)
         
-        # Fetch all data
-        print("Starting to fetch all courses and papers...\n")
-        all_data = fetcher.fetch_all()
+        # Fetch course list first
+        print("Fetching course list...\n")
+        courses = fetcher.fetch_all_courses()
+        
+        if not courses:
+            print("No courses found")
+            return
+        
+        # Interactive course selection (unless --all flag is set)
+        if args.all:
+            selected_courses = courses
+            print(f"\n已选择全部 {len(courses)} 门课程（--all 模式）")
+        else:
+            selected_courses = select_courses_interactively(courses)
+            
+            if not selected_courses:
+                print("No courses selected. Exiting.")
+                return
+        
+        # Fetch data for selected courses only
+        print(f"\nStarting to fetch papers for {len(selected_courses)} selected course(s)...\n")
+        all_data = fetcher.fetch_selected_courses(selected_courses)
         
         # Print statistics
         fetcher.print_stats()

@@ -350,6 +350,20 @@ class CourseFetcher:
             print("No courses found")
             return {}
 
+        return self.fetch_selected_courses(courses)
+
+    def fetch_selected_courses(self, courses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Fetch papers for selected courses.
+
+        Args:
+            courses: List of course dictionaries to fetch
+
+        Returns:
+            Dictionary containing all fetched data
+        """
+        if not courses:
+            return {}
+
         all_data = {}
 
         # Process each course

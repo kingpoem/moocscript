@@ -116,8 +116,32 @@ def main():
         default="output/markdown",
         help="Output directory for Markdown files (default: output/markdown)",
     )
+    parser.add_argument(
+        "--courses",
+        nargs="+",
+        default=None,
+        help="List of course names to process (only process these courses)",
+    )
+    parser.add_argument(
+        "--courses-file",
+        type=str,
+        default=None,
+        help="JSON file containing list of course names to process",
+    )
     
     args = parser.parse_args()
+    
+    # Load courses from file if specified
+    selected_courses = args.courses
+    if args.courses_file:
+        courses_file = Path(args.courses_file)
+        if courses_file.exists():
+            try:
+                with open(courses_file, "r", encoding="utf-8") as f:
+                    selected_courses = json.load(f)
+            except Exception as e:
+                print(f"Failed to load courses file: {str(e)}")
+                selected_courses = None
     
     json_dir = Path(args.input)
     markdown_dir = Path(args.output)
@@ -147,6 +171,20 @@ def main():
             return
         
         print(f"Found {len(courses_data)} courses with papers")
+        
+        # Filter by selected courses if specified
+        if selected_courses:
+            filtered_courses_data = {
+                name: papers for name, papers in courses_data.items()
+                if name in selected_courses
+            }
+            if filtered_courses_data:
+                print(f"Processing {len(filtered_courses_data)} selected course(s): {', '.join(filtered_courses_data.keys())}")
+                courses_data = filtered_courses_data
+            else:
+                print("No matching courses found in selected list")
+                return
+        
         print()
         
         # Convert to Markdown
