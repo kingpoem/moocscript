@@ -25,6 +25,8 @@ uv sync
 
 ```bash
 export MOOC_MOB_TOKEN=xxx
+# or
+uv run python fetch_all.py --token=xxx # 在 Windows 上可以直接这样加入 token
 ```
 
 ## 运行方法
