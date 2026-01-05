@@ -139,7 +139,7 @@ def add_text_with_images(doc: Document, content: str, image_cache_dir: Optional[
         List of paragraphs created (for tracking)
     """
     if font_size is None:
-        font_size = Pt(10.5)
+        font_size = Pt(9.5)
     
     created_paragraphs = []
     image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
@@ -195,8 +195,8 @@ def add_text_with_images(doc: Document, content: str, image_cache_dir: Optional[
                         img_para.paragraph_format.left_indent = paragraph_indent
                     if not inline_images:
                         img_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    img_para.paragraph_format.space_before = Pt(3)
-                    img_para.paragraph_format.space_after = Pt(3)
+                    img_para.paragraph_format.space_before = Pt(2)
+                    img_para.paragraph_format.space_after = Pt(2)
                     img_run = img_para.add_run()
                     # Insert image with max width
                     img_run.add_picture(str(img_path), width=Inches(5 if inline_images else 6))
@@ -257,7 +257,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
     style = doc.styles['Normal']
     font = style.font
     font.name = '宋体'
-    font.size = Pt(10.5)
+    font.size = Pt(9.5)
     style._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
     
     # Track if we're in an options section
@@ -280,7 +280,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             p = doc.add_paragraph()
             p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
             run = p.add_run(title)
-            run.font.size = Pt(16)
+            run.font.size = Pt(14)
             run.font.bold = True
             run.font.name = '宋体'
             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
@@ -294,7 +294,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             title = line[3:].strip()
             p = doc.add_paragraph()
             run = p.add_run(title)
-            run.font.size = Pt(12)
+            run.font.size = Pt(11)
             run.font.bold = True
             run.font.name = '宋体'
             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
@@ -308,7 +308,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             title = line[4:].strip()
             p = doc.add_paragraph()
             run = p.add_run(title)
-            run.font.size = Pt(11)
+            run.font.size = Pt(10)
             run.font.bold = True
             run.font.name = '宋体'
             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
@@ -329,12 +329,12 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                 p = doc.add_paragraph()
                 run1 = p.add_run(bold_text)
                 run1.font.bold = True
-                run1.font.size = Pt(10.5)
+                run1.font.size = Pt(9.5)
                 run1.font.name = '宋体'
                 run1._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 if rest_text:
                     run2 = p.add_run(rest_text)
-                    run2.font.size = Pt(10.5)
+                    run2.font.size = Pt(9.5)
                     run2.font.name = '宋体'
                     run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
             i += 1
@@ -363,7 +363,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                 p.paragraph_format.space_after = Pt(0)
                 
                 run1 = p.add_run(f"{option_letter}. ")
-                run1.font.size = Pt(10.5)
+                run1.font.size = Pt(9.5)
                 run1.font.name = '宋体'
                 run1._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 
@@ -377,7 +377,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                 if not image_matches:
                     # No images, just add text
                     run2 = p.add_run(content)
-                    run2.font.size = Pt(10.5)
+                    run2.font.size = Pt(9.5)
                     run2.font.name = '宋体'
                     run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                     if is_correct:
@@ -391,7 +391,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                             text_part = content[last_pos:img_match.start()].strip()
                             if text_part:
                                 run = p.add_run(text_part)
-                                run.font.size = Pt(10.5)
+                                run.font.size = Pt(9.5)
                                 run.font.name = '宋体'
                                 run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                                 if is_correct:
@@ -412,13 +412,13 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                                 print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
                                 # Add alt text as fallback
                                 run = p.add_run(f"[图片: {img_alt}]" if img_alt else "[图片]")
-                                run.font.size = Pt(10.5)
+                                run.font.size = Pt(9.5)
                                 run.font.name = '宋体'
                                 run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                         else:
                             # Add alt text as fallback
                             run = p.add_run(f"[图片加载失败: {img_alt}]" if img_alt else "[图片加载失败]")
-                            run.font.size = Pt(10.5)
+                            run.font.size = Pt(9.5)
                             run.font.name = '宋体'
                             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                         
@@ -429,7 +429,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                         text_part = content[last_pos:].strip()
                         if text_part:
                             run = p.add_run(text_part)
-                            run.font.size = Pt(10.5)
+                            run.font.size = Pt(9.5)
                             run.font.name = '宋体'
                             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                             if is_correct:
@@ -438,7 +438,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                     # Add "(正确答案)" marker after images if this is the correct answer
                     if is_correct:
                         run = p.add_run(" （正确答案）")
-                        run.font.size = Pt(10.5)
+                        run.font.size = Pt(9.5)
                         run.font.name = '宋体'
                         run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                         run.font.bold = True
@@ -447,7 +447,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                 # Add "(正确答案)" marker for text-only options if this is the correct answer
                 if is_correct and not image_matches:
                     run = p.add_run(" （正确答案）")
-                    run.font.size = Pt(10.5)
+                    run.font.size = Pt(9.5)
                     run.font.name = '宋体'
                     run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                     run.font.bold = True
@@ -464,7 +464,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                 p.paragraph_format.space_before = Pt(0)
                 p.paragraph_format.space_after = Pt(0)
                 run = p.add_run(f"• {content}")
-                run.font.size = Pt(10.5)
+                run.font.size = Pt(9.5)
                 run.font.name = '宋体'
                 run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 i += 1
@@ -481,11 +481,14 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             match = re.match(r'\*\*(.+?)\*\*\s*(.*)', line)
             if match:
                 bold_text = match.group(1)
+                if bold_text == '正确答案：':
+                    i += 1
+                    continue
                 rest_text = match.group(2)
                 p = doc.add_paragraph()
                 run1 = p.add_run(bold_text)
                 run1.font.bold = True
-                run1.font.size = Pt(10.5)
+                run1.font.size = Pt(9.5)
                 run1.font.name = '宋体'
                 run1._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 if rest_text:
@@ -496,7 +499,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                     if not image_matches:
                         # No images, just add text
                         run2 = p.add_run(rest_text)
-                        run2.font.size = Pt(10.5)
+                        run2.font.size = Pt(9.5)
                         run2.font.name = '宋体'
                         run2._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                     else:
@@ -508,7 +511,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                                 text_part = rest_text[last_pos:img_match.start()].strip()
                                 if text_part:
                                     run = p.add_run(text_part)
-                                    run.font.size = Pt(10.5)
+                                    run.font.size = Pt(9.5)
                                     run.font.name = '宋体'
                                     run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                             
@@ -527,13 +530,13 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                                     print(f"  Warning: Failed to insert image {img_url}: {str(e)}")
                                     # Add alt text as fallback
                                     run = p.add_run(f"[图片: {img_alt}]" if img_alt else "[图片]")
-                                    run.font.size = Pt(10.5)
+                                    run.font.size = Pt(9.5)
                                     run.font.name = '宋体'
                                     run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                             else:
                                 # Add alt text as fallback
                                 run = p.add_run(f"[图片加载失败: {img_alt}]" if img_alt else "[图片加载失败]")
-                                run.font.size = Pt(10.5)
+                                run.font.size = Pt(9.5)
                                 run.font.name = '宋体'
                                 run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                             
@@ -544,7 +547,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                             text_part = rest_text[last_pos:].strip()
                             if text_part:
                                 run = p.add_run(text_part)
-                                run.font.size = Pt(10.5)
+                                run.font.size = Pt(9.5)
                                 run.font.name = '宋体'
                                 run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
             i += 1
@@ -558,7 +561,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
             run = p.add_run(f"• {content}")
-            run.font.size = Pt(10.5)
+            run.font.size = Pt(9.5)
             run.font.name = '宋体'
             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
             i += 1
@@ -587,7 +590,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                         p.paragraph_format.space_before = Pt(0)
                         p.paragraph_format.space_after = Pt(0)
                         run = p.add_run(text_part)
-                        run.font.size = Pt(10.5)
+                        run.font.size = Pt(9.5)
                         run.font.name = '宋体'
                         run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 
@@ -601,8 +604,8 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                     try:
                         p = doc.add_paragraph()
                         p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                        p.paragraph_format.space_before = Pt(6)
-                        p.paragraph_format.space_after = Pt(6)
+                        p.paragraph_format.space_before = Pt(4)
+                        p.paragraph_format.space_after = Pt(4)
                         run = p.add_run()
                         # Insert image with max width of 6 inches
                         run.add_picture(str(img_path), width=Inches(6))
@@ -614,7 +617,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                             p.paragraph_format.space_before = Pt(0)
                             p.paragraph_format.space_after = Pt(0)
                             run = p.add_run(f"[图片: {img_alt}]")
-                            run.font.size = Pt(10.5)
+                            run.font.size = Pt(9.5)
                             run.font.name = '宋体'
                             run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 else:
@@ -624,7 +627,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                         p.paragraph_format.space_before = Pt(0)
                         p.paragraph_format.space_after = Pt(0)
                         run = p.add_run(f"[图片加载失败: {img_alt}]")
-                        run.font.size = Pt(10.5)
+                        run.font.size = Pt(9.5)
                         run.font.name = '宋体'
                         run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
                 
@@ -638,7 +641,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
                     p.paragraph_format.space_before = Pt(0)
                     p.paragraph_format.space_after = Pt(0)
                     run = p.add_run(text_part)
-                    run.font.size = Pt(10.5)
+                    run.font.size = Pt(9.5)
                     run.font.name = '宋体'
                     run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
             
@@ -660,7 +663,7 @@ def parse_markdown_to_docx(md_content: str, doc: Document, image_cache_dir: Opti
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         run = p.add_run(line)
-        run.font.size = Pt(10.5)
+        run.font.size = Pt(9.5)
         run.font.name = '宋体'
         run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
         i += 1
@@ -684,10 +687,10 @@ def convert_markdown_to_docx(md_file: Path, docx_file: Path, image_cache_dir: Op
     # Set page margins (compact)
     sections = doc.sections
     for section in sections:
-        section.top_margin = Inches(0.5)
-        section.bottom_margin = Inches(0.5)
-        section.left_margin = Inches(0.6)
-        section.right_margin = Inches(0.6)
+        section.top_margin = Inches(0.4)
+        section.bottom_margin = Inches(0.4)
+        section.left_margin = Inches(0.5)
+        section.right_margin = Inches(0.5)
     
     # Parse and add content (with image support)
     parse_markdown_to_docx(md_content, doc, image_cache_dir=image_cache_dir)
