@@ -1,6 +1,9 @@
 # MoocScript
 
-使用 Python 抽离了 [mooc-helper](https://github.com/whale4113/mooc-helper) 核心 API 请求逻辑。将请求结果保存为 Json，方便后续处理成 markdown 和 pdf 供复习使用。
+使用 Python 抽离了 [mooc-helper](https://github.com/whale4113/mooc-helper) 核心 API 请求逻辑。将请求结果保存为 Json，方便后续处理成 markdown 和 pdf 供复习使用。此项目初衷完全是为了方便复习使用。
+
+该脚本会将一门课程的所有测验和考试 md 文件进行合并，然后转成 pdf 供打印。 
+如果你对导出 pdf 的颜值有较高要求，也可以将合并的 md 放到你喜欢的应用里进行 pdf 转换。
 
 > [!CAUTION]
 > 注意，对于限时作业和考试，一旦进行了请求，就会开始计时。务必谨慎使用。

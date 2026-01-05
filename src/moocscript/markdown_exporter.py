@@ -245,6 +245,7 @@ def export_course_to_markdown(
     
     exported_count = 0
     skipped_count = 0
+    markdown_files_created = []
     
     # Process each paper type
     for paper_type, paper_list in papers.items():
@@ -294,16 +295,48 @@ def export_course_to_markdown(
                 # Skip if file already exists
                 if markdown_file.exists():
                     skipped_count += 1
+                    markdown_files_created.append(markdown_file)
                     continue
                 
                 with open(markdown_file, "w", encoding="utf-8") as f:
                     f.write(markdown_content)
                 
                 exported_count += 1
+                markdown_files_created.append(markdown_file)
             except Exception as e:
                 print(f"  Failed to export {paper_name}: {str(e)}")
                 import traceback
                 traceback.print_exc()
+    
+    # Merge all Markdown files for this course
+    if markdown_files_created:
+        merged_md_name = f"{safe_course_name}_完整版.md"
+        merged_md_file = course_dir / merged_md_name
+        
+        # Skip if merged file already exists
+        if not merged_md_file.exists():
+            try:
+                # Sort files by name for consistent ordering
+                markdown_files_created = sorted(markdown_files_created)
+                
+                merged_content = []
+                merged_content.append(f"# {course_name} - 完整版\n")
+                merged_content.append("---\n")
+                
+                for md_file in markdown_files_created:
+                    try:
+                        with open(md_file, "r", encoding="utf-8") as f:
+                            content = f.read()
+                            merged_content.append(content)
+                            merged_content.append("\n\n---\n\n")
+                    except Exception as e:
+                        print(f"  Warning: Failed to read {md_file.name} for merging: {str(e)}")
+                        continue
+                
+                with open(merged_md_file, "w", encoding="utf-8") as f:
+                    f.write("\n".join(merged_content))
+            except Exception as e:
+                print(f"  Warning: Failed to create merged Markdown: {str(e)}")
     
     return exported_count, skipped_count
 
