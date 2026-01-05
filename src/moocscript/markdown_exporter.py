@@ -6,6 +6,56 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 
+def clean_unicode_control_chars(text: str) -> str:
+    """Remove Unicode control characters and invisible characters.
+    
+    Args:
+        text: Input text string
+        
+    Returns:
+        Cleaned text string
+    """
+    if not text:
+        return ""
+    
+    # Remove common Unicode control characters
+    # U+200E: Left-to-Right Mark (LRM)
+    # U+200F: Right-to-Left Mark (RLM)
+    # U+200B: Zero Width Space
+    # U+200C: Zero Width Non-Joiner
+    # U+200D: Zero Width Joiner
+    # U+FEFF: Zero Width No-Break Space (BOM)
+    # U+202A-U+202E: Directional formatting characters
+    # U+2060-U+206F: Word joiner and invisible characters
+    control_chars = [
+        '\u200E',  # LRM
+        '\u200F',  # RLM
+        '\u200B',  # Zero Width Space
+        '\u200C',  # Zero Width Non-Joiner
+        '\u200D',  # Zero Width Joiner
+        '\uFEFF',  # Zero Width No-Break Space
+        '\u202A',  # Left-to-Right Embedding
+        '\u202B',  # Right-to-Left Embedding
+        '\u202C',  # Pop Directional Formatting
+        '\u202D',  # Left-to-Right Override
+        '\u202E',  # Right-to-Left Override
+        '\u2060',  # Word Joiner
+        '\u2061',  # Function Application
+        '\u2062',  # Invisible Times
+        '\u2063',  # Invisible Separator
+        '\u2064',  # Invisible Plus
+        '\u2066',  # Left-to-Right Isolate
+        '\u2067',  # Right-to-Left Isolate
+        '\u2068',  # First Strong Isolate
+        '\u2069',  # Pop Directional Isolate
+    ]
+    
+    for char in control_chars:
+        text = text.replace(char, '')
+    
+    return text
+
+
 def html_to_text(html_content: str) -> str:
     """Convert HTML content to plain text, handling common tags."""
     if not html_content:
@@ -16,6 +66,9 @@ def html_to_text(html_content: str) -> str:
     
     # Decode HTML entities
     text = html.unescape(text)
+    
+    # Remove Unicode control characters
+    text = clean_unicode_control_chars(text)
     
     # Clean up whitespace
     text = re.sub(r'\s+', ' ', text)
@@ -327,6 +380,8 @@ def export_course_to_markdown(
                     try:
                         with open(md_file, "r", encoding="utf-8") as f:
                             content = f.read()
+                            # Clean Unicode control characters from merged content
+                            content = clean_unicode_control_chars(content)
                             merged_content.append(content)
                             merged_content.append("\n\n---\n\n")
                     except Exception as e:
