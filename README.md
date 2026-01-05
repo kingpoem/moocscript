@@ -10,6 +10,10 @@
 
 ## 环境搭建
 
+原生开发平台 Archlinux
+
+在 macOS 和 Windows 上可以比较简单的转换到 markdown，后续 pdf 处理建议换到其他软件。
+
 ```bash
 uv sync
 ```

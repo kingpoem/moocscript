@@ -372,8 +372,6 @@ def export_course_to_markdown(
                 markdown_files_created = sorted(markdown_files_created)
                 
                 merged_content = []
-                merged_content.append(f"# {course_name} - 完整版\n")
-                merged_content.append("---\n")
                 
                 for md_file in markdown_files_created:
                     try:
