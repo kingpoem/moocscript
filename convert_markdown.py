@@ -37,17 +37,44 @@ def find_json_files(json_dir: Path) -> dict:
         
         # Find all JSON files
         for json_file in course_dir.glob("*.json"):
-            if json_file.name == "summary.json":
+            if json_file.name == "summary.json" or json_file.name == "selected_courses.json":
                 continue
             
             # Parse filename: {type}_{name}_{id}.json
-            name_parts = json_file.stem.split("_", 2)
-            if len(name_parts) >= 2:
-                paper_type = name_parts[0]
-                paper_name = "_".join(name_parts[1:])
+            # Handle special cases: exam_objective, exam_subjective
+            stem = json_file.stem
+            paper_type = None
+            paper_name = None
+            
+            # Check for exam_objective or exam_subjective first
+            if stem.startswith("exam_objective_"):
+                paper_type = "exam_objective"
+                paper_name = stem[len("exam_objective_"):]
+            elif stem.startswith("exam_subjective_"):
+                paper_type = "exam_subjective"
+                paper_name = stem[len("exam_subjective_"):]
             else:
-                paper_type = "unknown"
-                paper_name = json_file.stem
+                # Regular format: {type}_{name}_{id}.json
+                name_parts = stem.split("_", 2)
+                if len(name_parts) >= 2:
+                    paper_type = name_parts[0]
+                    paper_name = "_".join(name_parts[1:])
+                else:
+                    paper_type = "unknown"
+                    paper_name = stem
+            
+            # Remove test_id suffix if present (format: name_id)
+            # Test if paper_name ends with a number pattern
+            if paper_name:
+                # Try to split by last underscore to remove test_id
+                name_parts = paper_name.rsplit("_", 1)
+                if len(name_parts) == 2:
+                    # Check if last part is numeric (test_id)
+                    try:
+                        int(name_parts[1])
+                        paper_name = name_parts[0]  # Remove test_id
+                    except ValueError:
+                        pass  # Not a test_id, keep as is
             
             # Try to extract chapter name from JSON content
             try:
@@ -195,15 +222,21 @@ def main():
         total_exported = 0
         total_errors = 0
         
+        total_skipped = 0
+        
         for course_name, papers in courses_data.items():
             try:
-                exported = export_course_to_markdown(
+                exported, skipped = export_course_to_markdown(
                     papers,
                     markdown_dir,
                     course_name,
                 )
                 total_exported += exported
-                print(f"  {course_name}: {exported} papers exported")
+                total_skipped += skipped
+                status = f"{exported} exported"
+                if skipped > 0:
+                    status += f", {skipped} skipped"
+                print(f"  {course_name}: {status}")
             except Exception as e:
                 total_errors += 1
                 print(f"  {course_name}: Failed - {str(e)}")
@@ -211,6 +244,8 @@ def main():
         print()
         print("=" * 60)
         print(f"   Total papers exported: {total_exported}")
+        if total_skipped > 0:
+            print(f"   Total papers skipped: {total_skipped} (already exist)")
         if total_errors > 0:
             print(f"   Errors: {total_errors}")
         print(f"   Markdown files saved to: {markdown_dir}")

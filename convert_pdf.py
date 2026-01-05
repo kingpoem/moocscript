@@ -228,6 +228,7 @@ def main():
         print("=" * 60)
         
         total_exported = 0
+        total_skipped = 0
         total_errors = 0
         
         for course_name, markdown_files in courses_data.items():
@@ -236,24 +237,39 @@ def main():
             course_pdf_dir = pdf_dir / safe_course_name
             course_pdf_dir.mkdir(parents=True, exist_ok=True)
             
+            course_exported = 0
+            course_skipped = 0
+            
             for md_file in markdown_files:
                 try:
                     # Generate PDF filename
                     pdf_filename = md_file.stem + ".pdf"
                     pdf_file = course_pdf_dir / pdf_filename
                     
+                    # Skip if PDF file already exists
+                    if pdf_file.exists():
+                        course_skipped += 1
+                        total_skipped += 1
+                        continue
+                    
                     # Convert to PDF
                     convert_markdown_to_pdf(md_file, pdf_file)
+                    course_exported += 1
                     total_exported += 1
                 except Exception as e:
                     total_errors += 1
                     print(f"  Failed to convert {md_file.name}: {str(e)}")
             
-            print(f"  {course_name}: {len(markdown_files)} PDF files exported")
+            status = f"{course_exported} exported"
+            if course_skipped > 0:
+                status += f", {course_skipped} skipped"
+            print(f"  {course_name}: {status}")
         
         print()
         print("=" * 60)
         print(f"   Total PDF files exported: {total_exported}")
+        if total_skipped > 0:
+            print(f"   Total PDF files skipped: {total_skipped} (already exist)")
         if total_errors > 0:
             print(f"   Errors: {total_errors}")
         print(f"   PDF files saved to: {pdf_dir}")

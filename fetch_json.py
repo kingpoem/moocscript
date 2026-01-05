@@ -192,7 +192,7 @@ def main():
         with open(summary_file, "w", encoding="utf-8") as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
         
-        print(f"\nAll done!")
+        print("\nAll done!")
         print(f"   JSON files saved to: {output_dir / 'json'}")
         print(f"   Summary saved to: {summary_file}")
     

@@ -1,6 +1,6 @@
 """High-level API client for MOOC platform."""
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from moocscript.config import APIConfig
 from moocscript.models import Result

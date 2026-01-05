@@ -3,7 +3,7 @@
 import html
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Tuple
 
 
 def html_to_text(html_content: str) -> str:
@@ -126,7 +126,7 @@ def format_subjective_question(question: Dict[str, Any], q_num: int) -> str:
             answer_text = html_to_text(sample_answers)
         else:
             answer_text = str(sample_answers)
-        lines.append(f"**参考答案：**")
+        lines.append("**参考答案：**")
         lines.append("")
         lines.append(answer_text)
         lines.append("")
@@ -223,7 +223,7 @@ def export_course_to_markdown(
     papers: Dict[str, List[Dict[str, Any]]],
     output_dir: Path,
     course_name: str,
-) -> int:
+) -> Tuple[int, int]:
     """Export all papers from a course to Markdown files.
     
     Args:
@@ -232,7 +232,7 @@ def export_course_to_markdown(
         course_name: Name of the course
         
     Returns:
-        Number of papers exported
+        Tuple of (exported_count, skipped_count)
     """
     import json
     
@@ -244,6 +244,7 @@ def export_course_to_markdown(
     course_dir.mkdir(parents=True, exist_ok=True)
     
     exported_count = 0
+    skipped_count = 0
     
     # Process each paper type
     for paper_type, paper_list in papers.items():
@@ -290,6 +291,11 @@ def export_course_to_markdown(
                 prefix = prefix_map.get(paper_type, paper_type)
                 markdown_file = course_dir / f"{prefix}_{safe_name}.md"
                 
+                # Skip if file already exists
+                if markdown_file.exists():
+                    skipped_count += 1
+                    continue
+                
                 with open(markdown_file, "w", encoding="utf-8") as f:
                     f.write(markdown_content)
                 
@@ -299,7 +305,7 @@ def export_course_to_markdown(
                 import traceback
                 traceback.print_exc()
     
-    return exported_count
+    return exported_count, skipped_count
 
 
 def sanitize_filename(name: str) -> str:
